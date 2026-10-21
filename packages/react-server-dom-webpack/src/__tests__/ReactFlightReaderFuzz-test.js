@@ -2478,10 +2478,7 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
     'rejected promise',
   ];
 
-  // The reply decoder still completes values by chunk, so its random graphs,
-  // which all include bound Server Functions, stay skipped.
-  const generated = host === 'reply' ? describe.skip : describe;
-  generated('generated graphs', () => {
+  describe('generated graphs', () => {
     seeds.forEach(seed => {
       for (let variant = 0; variant < 2; variant++) {
         const demandCount = sweep ? demands.length : 1;
@@ -2511,9 +2508,6 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
   // fails today; the comment above it says whether the reader or the writer
   // is at fault.
   describe('known cases', () => {
-    // The reply decoder completes values by chunk, as the client did before
-    // it completed them by their reachable fields, and fails the cases that
-    // run with it.skip on the reply host the same way the client did.
     it('Set containing itself', () =>
       runGraph({
         nodes: {
@@ -2549,7 +2543,7 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
         roots: {entry: 'a', other: 'b'},
       }));
 
-    (host === 'reply' ? it.skip : it)('function bound to its array', () =>
+    it('function bound to its array', () =>
       runGraph({
         nodes: {
           ready: {module: 'export-0'},
@@ -2557,10 +2551,9 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
           container: {array: ['fn', 'container', 'ready']},
         },
         roots: {entry: 'container', other: 'container'},
-      }),
-    );
+      }));
 
-    (host === 'reply' ? it.skip : it)('function bound to its Map', () =>
+    it('function bound to its Map', () =>
       runGraph({
         nodes: {
           ready: {module: 'export-0'},
@@ -2573,50 +2566,40 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
           },
         },
         roots: {entry: 'container', other: 'container'},
-      }),
-    );
+      }));
 
-    (host === 'reply' ? it.skip : it)(
-      'cycle first exposed through a bound function',
-      () =>
-        runGraph({
-          nodes: {
-            ready: {module: 'export-0'},
-            fn: {bound: ['region']},
-            region: {set: ['fn', 'region', 'ready']},
-          },
-          roots: {entry: 'fn', other: 'fn'},
-        }),
-    );
+    it('cycle first exposed through a bound function', () =>
+      runGraph({
+        nodes: {
+          ready: {module: 'export-0'},
+          fn: {bound: ['region']},
+          region: {set: ['fn', 'region', 'ready']},
+        },
+        roots: {entry: 'fn', other: 'fn'},
+      }));
 
-    (host === 'reply' ? it.skip : it)(
-      'cycle first exposed through a Promise of a bound function',
-      () =>
-        runGraph({
-          nodes: {
-            ready: {module: 'export-0'},
-            fn: {bound: ['region']},
-            region: {object: ['fn', 'region', 'ready']},
-            exposure: {promise: 'fn'},
-          },
-          roots: {entry: 'exposure', other: 'exposure'},
-        }),
-    );
+    it('cycle first exposed through a Promise of a bound function', () =>
+      runGraph({
+        nodes: {
+          ready: {module: 'export-0'},
+          fn: {bound: ['region']},
+          region: {object: ['fn', 'region', 'ready']},
+          exposure: {promise: 'fn'},
+        },
+        roots: {entry: 'exposure', other: 'exposure'},
+      }));
 
-    (host === 'reply' ? it.skip : it)(
-      'cycle first exposed through a stream item with a bound function',
-      () =>
-        runGraph({
-          nodes: {
-            ready: {module: 'export-0'},
-            fn: {bound: ['region']},
-            region: {array: ['fn', 'region', 'ready']},
-            item: {array: ['fn']},
-            exposure: {stream: ['item']},
-          },
-          roots: {entry: 'exposure', other: 'exposure'},
-        }),
-    );
+    it('cycle first exposed through a stream item with a bound function', () =>
+      runGraph({
+        nodes: {
+          ready: {module: 'export-0'},
+          fn: {bound: ['region']},
+          region: {array: ['fn', 'region', 'ready']},
+          item: {array: ['fn']},
+          exposure: {stream: ['item']},
+        },
+        roots: {entry: 'exposure', other: 'exposure'},
+      }));
 
     it('async module failing to evaluate after loading', () =>
       runGraph({
