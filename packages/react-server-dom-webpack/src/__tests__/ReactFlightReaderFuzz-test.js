@@ -2514,17 +2514,16 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
     // The reply decoder completes values by chunk, as the client did before
     // it completed them by their reachable fields, and fails the cases that
     // run with it.skip on the reply host the same way the client did.
-    (host === 'reply' ? it.skip : it)('Set containing itself', () =>
+    it('Set containing itself', () =>
       runGraph({
         nodes: {
           ready: {module: 'export-0'},
           set: {set: ['set', 'ready']},
         },
         roots: {entry: 'set', other: 'set'},
-      }),
-    );
+      }));
 
-    (host === 'reply' ? it.skip : it)('Map containing itself', () =>
+    it('Map containing itself', () =>
       runGraph({
         nodes: {
           ready: {module: 'export-0'},
@@ -2537,22 +2536,18 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
           },
         },
         roots: {entry: 'map', other: 'map'},
-      }),
-    );
+      }));
 
-    (host === 'reply' ? it.skip : it)(
-      'two collections containing each other',
-      () =>
-        runGraph({
-          nodes: {
-            ready: {module: 'export-0'},
-            key: {value: 'a'},
-            a: {set: ['b', 'ready']},
-            b: {map: [['key', 'a']]},
-          },
-          roots: {entry: 'a', other: 'b'},
-        }),
-    );
+    it('two collections containing each other', () =>
+      runGraph({
+        nodes: {
+          ready: {module: 'export-0'},
+          key: {value: 'a'},
+          a: {set: ['b', 'ready']},
+          b: {map: [['key', 'a']]},
+        },
+        roots: {entry: 'a', other: 'b'},
+      }));
 
     (host === 'reply' ? it.skip : it)('function bound to its array', () =>
       runGraph({

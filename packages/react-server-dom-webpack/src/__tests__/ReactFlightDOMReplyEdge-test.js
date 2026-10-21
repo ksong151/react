@@ -243,6 +243,106 @@ describe('ReactFlightDOMReplyEdge', () => {
     expect(streamedBuffers.flatMap(t => Array.from(t))).toEqual(expectedBytes);
   });
 
+  it('rejects a second Promise of a Set whose entry failed to load', async () => {
+    let rejectModule;
+    const ServerModule = serverExports(
+      {
+        greet() {
+          return 'hi';
+        },
+      },
+      new Promise((_, reject) => (rejectModule = reject)),
+    );
+    ReactServerDOMClient.registerServerReference(
+      ServerModule.greet,
+      ServerModule.greet.$$id,
+    );
+    // The second Promise's value is written as a reference to the first's.
+    const set = new Set([ServerModule.greet]);
+    const body = await ReactServerDOMClient.encodeReply({
+      first: Promise.resolve(set),
+      second: Promise.resolve(set),
+    });
+    const result = await ReactServerDOMServer.decodeReply(
+      body,
+      webpackServerMap,
+    );
+
+    rejectModule(new Error('module failed to load'));
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+
+    const settle = promise =>
+      new Promise(resolve => {
+        promise.then(
+          () => resolve('resolved'),
+          error => resolve('rejected: ' + error.message),
+        );
+      });
+    expect(await settle(result.first)).toBe('rejected: module failed to load');
+    expect(await settle(result.second)).toBe('rejected: module failed to load');
+  });
+
+  it('rejects a later Promise of an object holding a Map whose entry failed to load', async () => {
+    let rejectModule;
+    const ServerModule = serverExports(
+      {
+        greet() {
+          return 'hi';
+        },
+      },
+      new Promise((_, reject) => (rejectModule = reject)),
+    );
+    ReactServerDOMClient.registerServerReference(
+      ServerModule.greet,
+      ServerModule.greet.$$id,
+    );
+    const map = new Map([['key', ServerModule.greet]]);
+    // The copy is written as a reference to the holder's slot.
+    const copy = {map};
+    let resolveLater;
+    const later = new Promise(resolve => (resolveLater = resolve));
+    const bodyPromise = ReactServerDOMClient.encodeReply({
+      data: Promise.resolve({holder: {map}, copy}),
+      later,
+    });
+    await Promise.resolve();
+    resolveLater(copy);
+    const body = await bodyPromise;
+    const entries = Array.from(body);
+
+    let sendLast;
+    const lastSent = new Promise(resolve => (sendLast = resolve));
+    const iterable = {
+      async *[Symbol.asyncIterator]() {
+        for (let i = 0; i < entries.length; i++) {
+          if (i === entries.length - 1) {
+            await lastSent;
+          }
+          yield entries[i];
+        }
+      },
+    };
+    const result = await ReactServerDOMServer.decodeReplyFromAsyncIterable(
+      iterable,
+      webpackServerMap,
+    );
+    const settle = promise =>
+      new Promise(resolve => {
+        promise.then(
+          () => resolve('resolved'),
+          error => resolve('rejected: ' + error.message),
+        );
+      });
+
+    rejectModule(new Error('module failed to load'));
+    expect(await settle(result.data)).toBe('rejected: module failed to load');
+
+    sendLast();
+    expect(await settle(result.later)).toBe('rejected: module failed to load');
+  });
+
   it('ends a BYOB read that is waiting when the byte stream closes', async () => {
     const s = new ReadableStream({
       type: 'bytes',
