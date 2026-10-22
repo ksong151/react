@@ -45,6 +45,10 @@ import {enableFlightObjectReferences} from 'shared/ReactFeatureFlags';
 import hasOwnProperty from 'shared/hasOwnProperty';
 import getPrototypeOf from 'shared/getPrototypeOf';
 import isArray from 'shared/isArray';
+import {
+  escapePathSegment,
+  unescapePathSegment,
+} from 'shared/ReactFlightReferencePath';
 
 interface FlightStreamController {
   enqueueModel(json: string): void;
@@ -839,8 +843,8 @@ function reviveModel(
             continue;
           }
           const childRef =
-            reference !== undefined && key.indexOf(':') === -1
-              ? reference + ':' + key
+            reference !== undefined
+              ? reference + ':' + escapePathSegment(key)
               : undefined;
           const raw = value[key];
           const newValue = reviveModel(
@@ -2083,6 +2087,9 @@ function getOutlinedModel<T>(
   map: (response: Response, model: any, parentObject: Object, key: string) => T,
 ): T {
   const path = reference.split(':');
+  for (let i = 1; i < path.length; i++) {
+    path[i] = unescapePathSegment(path[i]);
+  }
   const id = parseInt(path[0], 16);
   const chunk = getChunk(response, id);
   if (chunk.status === RESOLVED_MODEL) {
