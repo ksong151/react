@@ -2454,10 +2454,9 @@ describe.each(['node', 'edge', 'reply'])('ReactFlightReaderFuzz (%s)', host => {
 
   // The reply decoder still completes values by chunk, so its random graphs,
   // which all include bound Server Functions, stay skipped.
-  // These leaves wait for fixes further up the stack: an object key whose value
-  // is undefined is dropped, and a cycle through a property name with a colon
-  // overflows the writer's stack.
-  const unsupportedMoves = ['undefined', 'colon'];
+  // One leaf waits for a fix further up the stack: a cycle through a property
+  // name with a colon overflows the writer's stack.
+  const unsupportedMoves = ['colon'];
 
   // A reply cannot carry client references, elements, server components,
   // Errors or symbols; its loading leaves are Server Functions.
